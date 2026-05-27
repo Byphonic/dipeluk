@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  bpjsNumber    String    @unique
+  name          String
+  dateOfBirth   DateTime
+  role          Role      @default(PATIENT)
+  puskesmasId   String?
+  puskesmas     Puskesmas? @relation(fields: [puskesmasId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  diseases      UserDisease[]
+  medications   Medication[]
+  medicationLogs MedicationLog[]
+  moodLogs      MoodLog[]
+  phq9Results   PHQ9Result[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Puskesmas {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  region    String
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+model UserDisease {
+  id      String @id @default(cuid())
+  userId  String
+  disease String
+  user    User   @relation(fields: [userId], references: [id])
+}
+
+model Medication {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  dosage        String
+  frequency     String
+  scheduleTimes String[] // e.g., ["08:00", "20:00"]
+  startDate     DateTime
+  endDate       DateTime?
+  isActive      Boolean  @default(true)
+  user          User     @relation(fields: [userId], references: [id])
+  logs          MedicationLog[]
+}
+
+model MedicationLog {
+  id           String   @id @default(cuid())
+  userId       String
+  medicationId String
+  takenAt      DateTime @default(now())
+  isTaken      Boolean
+  user         User     @relation(fields: [userId], references: [id])
+  medication   Medication @relation(fields: [medicationId], references: [id])
+}
+
+model MoodLog {
+  id       String   @id @default(cuid())
+  userId   String
+  mood     String   // "baik", "sedang", "buruk"
+  note     String?
+  loggedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model PHQ9Result {
+  id          String   @id @default(cuid())
+  userId      String
+  answers     Json
+  totalScore  Int
+  severity    String
+  item9Score  Int
+  isHighRisk  Boolean  @default(false)
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
